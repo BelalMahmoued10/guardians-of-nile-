@@ -3,16 +3,16 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 const fetch = require('node-fetch');
-
+const path = require('path');
 // --- 1. استدعاء الموديلات ---
 const Reading = require('./models/Reading');
 
 // --- 2. إعداد الخادم ---
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // --- 3. الاتصال بقاعدة البيانات ---
 mongoose.connect(process.env.DATABASE_URL)
