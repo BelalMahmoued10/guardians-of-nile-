@@ -3,207 +3,373 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حراس النيل - الخريطة</title>
+    <title>حراس النيل - الخريطة التفاعلية</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary-color: #007AFF;
-            --background-color: #F2F2F7;
-            --panel-color: #FFFFFF;
-            --text-primary: #1C1C1E;
-            --text-secondary: #8A8A8E;
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --primary-color: #007AFF; /* أزرق أساسي */
+            --background-color: #F2F2F7; /* خلفية فاتحة */
+            --panel-color: #FFFFFF;    /* لون الألواح */
+            --text-primary: #1C1C1E;    /* نص رئيسي داكن */
+            --text-secondary: #8A8A8E;  /* نص ثانوي رمادي */
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* ظل خفيف */
             --font-family: 'Cairo', sans-serif;
-            --danger-color: #FF3B30;
+            --danger-color: #FF3B30;    /* أحمر للخطر */
+            --temp-high: #F56565;       /* أحمر لدرجة حرارة عالية */
+            --temp-medium: #48BB78;     /* أخضر لمتوسطة */
+            --temp-low: #F6E05E;        /* أصفر لمنخفضة */
+
+            /* ألوان مخصصة للنوافذ المنبثقة (Popups) */
+            --popup-bg: #FFFFFF;        /* خلفية بيضاء */
+            --popup-border: #E5E5EA;    /* حدود رمادية فاتحة */
+            --popup-header-bg: #F8F8F8; /* خلفية هيدر فاتحة */
+            --popup-link-color: var(--primary-color); /* لون الروابط */
+            --popup-link-hover: #0056B3; /* لون الروابط عند التمرير */
         }
+        * { box-sizing: border-box; }
         body {
-            font-family: var(--font-family); margin: 0; background-color: var(--background-color); overflow: hidden;
+            font-family: var(--font-family); margin: 0; background-color: var(--background-color);
+            overflow: hidden; height: 100vh; display: flex; color: var(--text-primary);
         }
-        #map { height: 100vh; width: 100vw; z-index: 1; }
-        .guardian-tooltip {
-            background-color: rgba(255, 255, 255, 0.8); border: 1px solid var(--primary-color);
-            border-radius: 0.5rem; padding: 4px 8px; font-weight: 600; font-size: 0.9rem;
-            box-shadow: var(--shadow); white-space: nowrap;
+        #sidebar {
+            width: 350px; background-color: var(--panel-color); border-left: 1px solid #E5E5EA;
+            display: flex; flex-direction: column; z-index: 1000; box-shadow: var(--shadow);
         }
-        .floating-panel {
-            position: absolute; background-color: var(--panel-color); border-radius: 1.5rem;
-            box-shadow: var(--shadow); padding: 1rem; z-index: 1000; left: 50%;
-            transform: translateX(-50%); display: flex; gap: 0.5rem;
-        }
-        #bottom-nav {
-            bottom: 2rem; width: calc(100% - 3rem); max-width: 500px; justify-content: space-around;
-        }
-        .nav-button {
-            display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
-            color: var(--text-secondary); text-decoration: none; font-size: 0.75rem; font-weight: 600;
-        }
-        .nav-button i { font-size: 1.5rem; }
-        .nav-button.active { color: var(--primary-color); }
-        .map-controls {
-            position: absolute; top: 2rem; right: 1.5rem; z-index: 1000;
-            display: flex; flex-direction: column; gap: 0.75rem;
-        }
-        .control-button {
-            width: 50px; height: 50px; background-color: var(--panel-color); border: none;
-            border-radius: 50%; box-shadow: var(--shadow); color: var(--text-primary);
-            font-size: 1.2rem; cursor: pointer; display: grid; place-items: center;
-        }
+        .sidebar-header { padding: 1rem 1.5rem; border-bottom: 1px solid #E5E5EA; flex-shrink: 0; }
+        .sidebar-header h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+        #guardian-list { flex-grow: 1; overflow-y: auto; }
+        .guardian-item { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-bottom: 1px solid #E5E5EA; cursor: pointer; transition: background-color 0.2s; }
+        .guardian-item:hover { background-color: #F2F2F7; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .guardian-id { font-weight: 600; flex-grow: 1; }
+        .guardian-temp { font-size: 0.9rem; color: var(--text-secondary); }
+        #map-container { flex-grow: 1; position: relative; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+        .map-controls { position: absolute; top: 1rem; left: 1rem; z-index: 1000; display: flex; flex-direction: column; gap: 0.75rem; }
+        .control-button { width: 40px; height: 40px; background-color: var(--panel-color); border: none; border-radius: 0.5rem; box-shadow: var(--shadow); color: var(--text-primary); font-size: 1rem; cursor: pointer; display: grid; place-items: center; }
         .control-button.active { background-color: var(--primary-color); color: var(--panel-color); }
-        #alert-notification {
-            position: absolute; bottom: -100px; left: 50%; transform: translateX(-50%); z-index: 2000;
-            background-color: var(--danger-color); color: white; padding: 1rem 1.5rem; border-radius: 1rem;
-            box-shadow: var(--shadow); font-weight: 700; display: flex; align-items: center; gap: 1rem;
-            transition: bottom 0.5s ease-in-out;
+        #alert-notification { position: fixed; bottom: -100px; left: 1rem; z-index: 2000; background-color: var(--danger-color); color: var(--panel-color); padding: 0.8rem 1.2rem; border-radius: 0.5rem; box-shadow: var(--shadow); font-weight: 600; display: flex; align-items: center; gap: 0.5rem; transition: bottom 0.5s ease-in-out; font-size: 0.9rem; }
+        #alert-notification.show { bottom: 1rem; }
+        #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 3000; display: flex; justify-content: center; align-items: center; text-align: center; color: var(--panel-color); visibility: visible; opacity: 1; transition: opacity 0.5s, visibility 0.5s; }
+        #start-overlay.hidden { opacity: 0; visibility: hidden; }
+        #start-btn { padding: 20px 40px; font-size: 2em; font-family: var(--font-family); background-color: var(--primary-color); color: var(--panel-color); border: none; border-radius: 1rem; cursor: pointer; box-shadow: 0 0 20px rgba(0, 122, 255, 0.5); }
+        
+        /* Marker Cluster Styling */
+        .marker-cluster {
+            background-clip: padding-box;
+            border-radius: 50%;
         }
-        #alert-notification.show { bottom: 9rem; }
-        #start-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.7); z-index: 3000; display: flex;
-            justify-content: center; align-items: center; text-align: center; color: white;
+        .marker-cluster div {
+            width: 30px; height: 30px; margin: 5px;
+            text-align: center; border-radius: 50%;
+            font-size: 12px; font-weight: bold;
+            color: var(--panel-color); /* نص أبيض */
+            line-height: 30px;
         }
-        #start-btn {
-            padding: 20px 40px; font-size: 2em; font-family: var(--font-family);
-            background-color: var(--primary-color); color: white; border: none;
-            border-radius: 1rem; cursor: pointer; box-shadow: 0 0 20px rgba(0, 122, 255, 0.5);
+        .marker-cluster-small { background-color: rgba(0, 122, 255, 0.6); } /* أزرق فاتح */
+        .marker-cluster-small div { background-color: rgba(0, 122, 255, 0.8); }
+        .marker-cluster-medium { background-color: rgba(255, 149, 0, 0.6); } /* برتقالي متوسط */
+        .marker-cluster-medium div { background-color: rgba(255, 149, 0, 0.8); }
+        .marker-cluster-large { background-color: rgba(255, 59, 48, 0.6); } /* أحمر غامق */
+        .marker-cluster-large div { background-color: rgba(255, 59, 48, 0.8); }
+
+        /* --- **تنسيق النافذة المنبثقة لقائمة المجموعة (Cluster Popup List)** --- */
+        .cluster-popup-container.leaflet-popup-content-wrapper {
+            padding: 0;
+            border-radius: 0.75rem; /* زوايا مستديرة */
+            box-shadow: var(--shadow); /* ظل أنيق */
+            background-color: var(--popup-bg);
+            border: 1px solid var(--popup-border);
+        }
+        .cluster-popup-container .leaflet-popup-content {
+            margin: 0;
+            padding: 0;
+            width: auto !important; /* السماح للمحتوى بتحديد العرض */
+        }
+        .cluster-popup-header {
+            background-color: var(--popup-header-bg);
+            padding: 0.8rem 1.2rem;
+            border-bottom: 1px solid var(--popup-border);
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cluster-popup-header i {
+            color: var(--primary-color); /* لون أيقونة الهيدر */
+        }
+        .cluster-popup-list {
+            max-height: 250px; /* زيادة الارتفاع قليلاً */
+            overflow-y: auto;
+            list-style-type: none; /* إزالة التنقيط الافتراضي */
+            padding: 0.5rem 0; /* هوامش داخلية */
+            margin: 0;
+        }
+        .cluster-popup-list::-webkit-scrollbar { /* تخصيص شريط التمرير */
+            width: 8px;
+        }
+        .cluster-popup-list::-webkit-scrollbar-track {
+            background: var(--popup-header-bg);
+        }
+        .cluster-popup-list::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 20px;
+            border: 2px solid var(--popup-bg);
+        }
+        .cluster-popup-list li {
+            padding: 0.6rem 1.2rem; /* مساحة داخلية لكل عنصر */
+            transition: background-color 0.2s;
+        }
+        .cluster-popup-list li:hover {
+            background-color: var(--popup-header-bg); /* تغيير الخلفية عند التمرير */
+        }
+        .cluster-popup-list a {
+            text-decoration: none;
+            color: var(--popup-link-color);
+            font-weight: 600;
+            display: block; /* لجعل مساحة النقر أكبر */
+        }
+        .cluster-popup-list a:hover {
+            color: var(--popup-link-hover); /* تغيير لون النص عند التمرير */
+            text-decoration: none; /* التأكد من عدم وجود خط تحت النص */
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-
-    <div id="bottom-nav" class="floating-panel">
-        <a href="index.html" class="nav-button"><i class="fa-solid fa-house"></i> <span>الرئيسية</span></a>
-        <a href="map.html" class="nav-button active"><i class="fa-solid fa-map-location-dot"></i> <span>الخريطة</span></a>
-    </div>
-
-    <div class="map-controls">
-        <button id="toggle-satellite" class="control-button" title="تبديل عرض الخريطة"><i class="fa-solid fa-satellite"></i></button>
-        <button id="zoom-in" class="control-button"><i class="fa-solid fa-plus"></i></button>
-        <button id="zoom-out" class="control-button"><i class="fa-solid fa-minus"></i></button>
-        <button id="locate-me" class="control-button"><i class="fa-solid fa-location-crosshairs"></i></button>
-    </div>
-
-    <div id="alert-notification">
-        <i class="fa-solid fa-triangle-exclamation fa-beat"></i>
-        <span id="alert-message"></span>
-    </div>
-
-    <audio id="siren-sound" src="Audio/videoplayback.m4a" preload="auto"></audio>
-
-    <div id="start-overlay">
-        <div>
-            <h1>مراقبة حراس النيل</h1>
-            <button id="start-btn"><i class="fa-solid fa-play"></i> بدء المراقبة الحية</button>
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fa-solid fa-list-check" style="color: var(--primary-color);"></i> قائمة الحراس</h2>
         </div>
-    </div>
+        <div id="guardian-list"></div>
+    </aside>
+
+    <main id="map-container">
+        <div id="map"></div>
+        <div class="map-controls">
+             <button id="zoom-in" class="control-button" title="تكبير"><i class="fa-solid fa-plus"></i></button>
+             <button id="zoom-out" class="control-button" title="تصغير"><i class="fa-solid fa-minus"></i></button>
+             <button id="toggle-satellite" class="control-button" title="تبديل الخريطة"><i class="fa-solid fa-layer-group"></i></button>
+             <button id="locate-me" class="control-button" title="موقعي"><i class="fa-solid fa-location-crosshairs"></i></button>
+        </div>
+        <div id="alert-notification">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span id="alert-message"></span>
+        </div>
+        <div id="start-overlay">
+             <div>
+                <h1><i class="fa-solid fa-water"></i> حراس النيل</h1>
+                <button id="start-btn"><i class="fa-solid fa-play"></i> بدء المراقبة</button>
+            </div>
+        </div>
+    </main>
+    <audio id="siren-sound" src="" preload="auto"></audio>
 
     <script>
+        // --- 1. إعداد الخريطة والطبقات ---
         const map = L.map('map', { zoomControl: false }).setView([26.8206, 30.8025], 6);
-        const streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        const satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-
-        document.getElementById('zoom-in').addEventListener('click', () => map.zoomIn());
-        document.getElementById('zoom-out').addEventListener('click', () => map.zoomOut());
-        document.getElementById('locate-me').addEventListener('click', () => map.locate({ setView: true, maxZoom: 14 }));
-        
-        const toggleSatelliteBtn = document.getElementById('toggle-satellite');
-        let isSatelliteActive = false;
-        toggleSatelliteBtn.addEventListener('click', () => {
-            if (isSatelliteActive) {
-                map.removeLayer(satelliteMap); map.addLayer(streetMap);
-                toggleSatelliteBtn.classList.remove('active');
-            } else {
-                map.removeLayer(streetMap); map.addLayer(satelliteMap);
-                toggleSatelliteBtn.classList.add('active');
-            }
-            isSatelliteActive = !isSatelliteActive;
+        const streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+        const satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+        const markers = L.markerClusterGroup({
+            spiderfyOnMaxZoom: false, showCoverageOnHover: false, zoomToBoundsOnClick: true
         });
 
+        // --- 2. عناصر الواجهة ---
+        const guardianListEl = document.getElementById('guardian-list');
         const alertNotification = document.getElementById('alert-notification');
         const alertMessage = document.getElementById('alert-message');
         const sirenSound = document.getElementById('siren-sound');
         const startOverlay = document.getElementById('start-overlay');
         const startBtn = document.getElementById('start-btn');
         let displayedReadingsIds = new Set();
+        let displayedMarkers = new Map();
         let isInitialLoad = true;
+        let intervalId = null;
 
+        // --- 3. الدوال المساعدة ---
+        const getTempStatusColor = (temp) => {
+             if (temp === null || temp === undefined || isNaN(temp)) return 'var(--text-secondary)';
+             if (temp > 28) return 'var(--temp-high)';
+             if (temp >= 18) return 'var(--temp-medium)';
+             return 'var(--temp-low)';
+        };
         const showAlert = (message) => {
             alertMessage.textContent = message;
             alertNotification.classList.add('show');
-            sirenSound.play().catch(error => console.log("User must interact with the page to play sound."));
-            setTimeout(() => {
-                alertNotification.classList.remove('show');
-            }, 5000);
+            sirenSound.play().catch(error => console.warn("Audio play failed:", error));
+            setTimeout(() => { alertNotification.classList.remove('show'); }, 4000);
         };
 
+        // --- 4. الدالة الرئيسية للتحديث ---
         const fetchDataAndUpdate = async () => {
             try {
                 const response = await fetch('http://localhost:3000/api/v1/readings');
-                if (!response.ok) throw new Error('Network response was not ok');
-                const readings = await response.json();
-                
+                if (!response.ok) throw new Error(`Network response error: ${response.status} ${response.statusText}`);
+                let readings = await response.json();
+
+                readings.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
                 let newReadingsFound = false;
+                markers.clearLayers();
+                guardianListEl.innerHTML = '';
+                displayedMarkers.clear();
+
+                if (!Array.isArray(readings) || readings.length === 0) {
+                    guardianListEl.innerHTML = '<p style="padding: 1rem; text-align: center;">لا توجد بيانات حاليًا.</p>';
+                    map.addLayer(markers);
+                    if (isInitialLoad) isInitialLoad = false;
+                    return;
+                }
+
                 readings.forEach(reading => {
-                    if (!displayedReadingsIds.has(reading._id)) {
-                        if (!isInitialLoad) {
-                            newReadingsFound = true;
-                        }
-                        displayedReadingsIds.add(reading._id);
+                    const readingId = reading._id;
+                    const lat = reading.location?.latitude;
+                    const lon = reading.location?.longitude;
 
-                        const marker = L.marker([reading.location.latitude, reading.location.longitude]).addTo(map);
-                        marker.bindTooltip(reading.guardian_id, {
-                            permanent: true, direction: 'top', className: 'guardian-tooltip', offset: [0, -20]
-                        });
-                        marker.on('click', () => {
-                            window.location.href = `guardian-dashboard.html?id=${reading.guardian_id}`;
-                        });
+                    if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) {
+                         console.warn(`Skipping reading ${readingId} (${reading.guardian_id}) due to invalid coordinates.`);
+                         return;
                     }
-                });
-                
-                if (newReadingsFound) {
-                    showAlert('تنبيه: تم استقبال بيانات جديدة!');
-                }
 
-                if (isInitialLoad) {
-                    isInitialLoad = false;
-                }
+                    const temperatureReading = reading.readings?.find(r => r && r.type === 'temperature');
+                    const tempValue = temperatureReading && typeof temperatureReading.value === 'number' ? temperatureReading.value : null;
+                    const tempColor = getTempStatusColor(tempValue);
+
+                    const markerIcon = L.divIcon({
+                        className: 'custom-marker-icon',
+                        html: `<div style='font-size: 1.5rem; color: ${tempColor}; text-shadow: 0 0 3px rgba(0,0,0,0.5);'><i class="fa-solid fa-location-dot"></i></div>`,
+                        iconSize: [30, 42], iconAnchor: [15, 42]
+                     });
+                    
+                    const marker = L.marker([lat, lon], { 
+                        icon: markerIcon,
+                        guardian_id: reading.guardian_id 
+                    });
+
+                    marker.on('click', () => { window.location.href = `guardian-dashboard.html?id=${reading.guardian_id}`; });
+                    markers.addLayer(marker);
+                    displayedMarkers.set(readingId, marker);
+
+                    const listItem = document.createElement('div');
+                    listItem.className = 'guardian-item';
+                    listItem.dataset.id = readingId;
+                    listItem.innerHTML = `
+                        <span class="status-dot" style="background-color: ${tempColor};"></span>
+                        <span class="guardian-id">${reading.guardian_id}</span>
+                        <span class="guardian-temp">${tempValue !== null ? tempValue.toFixed(1) + '°C' : '-'}</span>
+                    `;
+                    guardianListEl.appendChild(listItem);
+
+                    if (!displayedReadingsIds.has(readingId)) {
+                         if (!isInitialLoad) newReadingsFound = true;
+                         displayedReadingsIds.add(readingId);
+                     }
+                });
+
+                if (!map.hasLayer(markers)) map.addLayer(markers);
+                if (newReadingsFound) showAlert('تنبيه: قراءات جديدة!');
+                if (isInitialLoad) isInitialLoad = false;
+
             } catch (error) {
-                console.error('فشل في جلب البيانات:', error);
+                console.error('Error fetching/processing data:', error);
+                guardianListEl.innerHTML = `<p style="padding: 1rem; text-align: center; color: red;"><b>خطأ:</b><br>${error.message}</p>`;
+                if (isInitialLoad) isInitialLoad = false;
             }
         };
 
-       // ابحث عن هذا الجزء في الكود
-startBtn.addEventListener('click', () => {
-    
-    // استبدل الكود القديم هنا بهذا الكود الجديد
-    // ---------------------------------------------
-    sirenSound.load(); // نطلب من المتصفح تحميل ملف الصوت استعدادًا لتشغيله
-    const playPromise = sirenSound.play();
-
-    if (playPromise !== undefined) {
-        playPromise.then(_ => {
-            // إذا نجح التشغيل، قم بإيقافه فورًا (هذا فقط لفتح "الإذن")
-            sirenSound.pause();
-            sirenSound.currentTime = 0;
-            console.log("تم تفعيل إذن تشغيل الصوت بنجاح.");
-        }).catch(error => {
-            console.error("فشل تفعيل إذن الصوت:", error);
-            // في هذه الحالة، قد لا يعمل الصوت تلقائيًا
+        // --- 5. ربط القائمة الجانبية بالخريطة ---
+        guardianListEl.addEventListener('click', (e) => {
+            const listItem = e.target.closest('.guardian-item');
+            if (!listItem) return;
+            const readingId = listItem.dataset.id;
+            const targetMarker = displayedMarkers.get(readingId);
+            if (targetMarker) {
+                 markers.zoomToShowLayer(targetMarker, () => {
+                     map.flyTo(targetMarker.getLatLng(), 15);
+                 });
+            }
         });
-    }
-    // ---------------------------------------------
 
-    startOverlay.style.display = 'none';
+        // --- 6. ربط أزرار التحكم بالخريطة ---
+        document.getElementById('zoom-in').addEventListener('click', () => map.zoomIn());
+        document.getElementById('zoom-out').addEventListener('click', () => map.zoomOut());
+        document.getElementById('locate-me').addEventListener('click', () => map.locate({ setView: true, maxZoom: 14 }));
+        const toggleSatelliteBtn = document.getElementById('toggle-satellite');
+        let isSatelliteActive = false;
+        toggleSatelliteBtn.addEventListener('click', () => {
+             if (isSatelliteActive) { map.removeLayer(satelliteMap); map.addLayer(streetMap); toggleSatelliteBtn.classList.remove('active'); }
+             else { map.removeLayer(streetMap); map.addLayer(satelliteMap); toggleSatelliteBtn.classList.add('active'); }
+             isSatelliteActive = !isSatelliteActive;
+        });
 
-    showAlert('تم تفعيل نظام المراقبة الحية!');
-    fetchDataAndUpdate();
-    setInterval(fetchDataAndUpdate, 5000);
-});
+        // --- 7. منطق زر البدء ---
+        if (startBtn && startOverlay) {
+             startBtn.addEventListener('click', () => {
+                 console.log("Start button clicked.");
+                 sirenSound.load();
+                 const playPromise = sirenSound.play();
+                 if (playPromise !== undefined) {
+                     playPromise.then(_ => { sirenSound.pause(); sirenSound.currentTime = 0; console.log("Audio context activated."); })
+                              .catch(error => { console.warn("Audio activation failed:", error); });
+                 }
+
+                 startOverlay.classList.add('hidden');
+                 setTimeout(() => {
+                     startOverlay.style.display = 'none';
+                     showAlert('تم تفعيل نظام المراقبة!');
+                     fetchDataAndUpdate(); 
+                     if (intervalId) clearInterval(intervalId);
+                     intervalId = setInterval(fetchDataAndUpdate, 5000); 
+                 }, 500);
+             });
+        } else {
+            console.error("Critical error: Start button or overlay element not found!");
+            alert("حدث خطأ في تحميل الصفحة. يرجى إعادة التحميل.");
+        }
+        
+        // --- 8. المنطق الجديد: الضغط على المجموعة (Cluster) ---
+        markers.on('clusterclick', function (e) {
+            e.originalEvent.preventDefault(); 
+            
+            const childMarkers = e.layer.getAllChildMarkers();
+            const guardianNames = new Set();
+            childMarkers.forEach(marker => {
+                guardianNames.add(marker.options.guardian_id); 
+            });
+            
+            // **هنا التغيير في بناء الـ HTML لتضمين الـ Header والأيقونة**
+            let listHtml = `
+                <div class="cluster-popup-header">
+                    <i class="fa-solid fa-users"></i> حراس في هذه المنطقة:
+                </div>
+                <ul class="cluster-popup-list">`;
+            
+            guardianNames.forEach(id => {
+                 listHtml += `<li><a href="guardian-dashboard.html?id=${id}">${id}</a></li>`;
+            });
+            
+            listHtml += '</ul>';
+            
+            L.popup({ 
+                className: 'cluster-popup-container', // **إضافة كلاس مخصص للـ Popup نفسه**
+                minWidth: 200 // **تحديد عرض أدنى للنافذة**
+            })
+                .setLatLng(e.layer.getLatLng())
+                .setContent(listHtml)
+                .openOn(map);
+        });
+
     </script>
 </body>
 </html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم الأدمن - حراس النيل</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #1A202C;
+            --panel-color: #2D3748;
+            --border-color: #4A5568;
+            --text-primary: #E2E8F0;
+            --text-secondary: #A0AEC0;
+            --accent-blue: #3182CE;
+            --status-danger: #E53E3E;
+            --status-danger-dark: #9B2C2C;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--panel-color);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+        }
+        h1 {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--accent-blue);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .admin-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+        }
+        .action-btn {
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-family: var(--font-family);
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        #delete-selected-btn {
+            background-color: var(--status-danger);
+            color: var(--text-primary);
+        }
+        #delete-selected-btn:hover { background-color: #C53030; }
+        #delete-all-btn {
+            background-color: var(--status-danger-dark);
+            color: var(--text-primary);
+            margin-right: auto;
+        }
+        #delete-all-btn:hover { background-color: #742A2A; }
+
+        #guardian-admin-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .list-header {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            color: var(--text-secondary);
+            padding: 0 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .guardian-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        .guardian-item:hover {
+            background-color: var(--border-color);
+        }
+        .guardian-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-left: 1.5rem;
+            cursor: pointer;
+        }
+        .guardian-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            flex-grow: 1;
+        }
+        #status-message {
+            margin-top: 1rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            display: none;
+        }
+        .status-success { background-color: #2F855A; color: white; display: block; }
+        .status-error { background-color: var(--status-danger-dark); color: white; display: block; }
+    </style>
+</head>
+<body>
+
+    <script>
+        (function() {
+            // **غيّر الباسورد ده لباسوورد سري من اختيارك**
+            const ADMIN_PASSWORD = "123"; 
+
+            const enteredPassword = prompt("الرجاء إدخال كلمة مرور الأدمن:");
+
+            if (enteredPassword !== ADMIN_PASSWORD) {
+                document.body.innerHTML = `<h1 style="color: white; text-align: center; padding-top: 50px;">كلمة مرور خاطئة. تم رفض الوصول.</h1>`;
+                // بنوقف تحميل باقي الـ CSS والـ HTML
+                document.head.innerHTML = `<style>body{background-color: #1A202C;}</style>`;
+            }
+        })();
+    </script>
+    <div class="container">
+        <h1><i class="fa-solid fa-user-shield"></i> لوحة تحكم الأدمن</h1>
+        
+        <div class="admin-actions">
+            <button id="delete-selected-btn" class="action-btn">
+                <i class="fa-solid fa-trash-can"></i> حذف المحدد
+            </button>
+            <button id="delete-all-btn" class="action-btn">
+                <i class="fa-solid fa-skull-crossbones"></i> حذف الكل
+            </button>
+        </div>
+
+        <div class="list-header">
+            <input type="checkbox" id="select-all" title="تحديد الكل">
+            <label for="select-all" style="font-size: 1rem; cursor: pointer;">تحديد الكل</label>
+        </div>
+        <ul id="guardian-admin-list">
+            </ul>
+        <div id="status-message"></div>
+    </div>
+
+    <script>
+        // --- هذا الكود لن يعمل إلا إذا كان الباسورد صحيحًا ---
+        
+        const guardianListEl = document.getElementById('guardian-admin-list');
+        const statusMessageEl = document.getElementById('status-message');
+        const selectAllCheckbox = document.getElementById('select-all');
+        const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+        const deleteAllBtn = document.getElementById('delete-all-btn');
+
+        // دالة لعرض رسائل الحالة
+        function showStatus(message, isError = false) {
+            statusMessageEl.textContent = message;
+            statusMessageEl.className = isError ? 'status-error' : 'status-success';
+        }
+
+        // دالة لجلب وعرض الحراس
+        async function loadGuardians() {
+            try {
+                const response = await fetch('http://localhost:3000/api/v1/readings');
+                if (!response.ok) throw new Error('فشل جلب البيانات');
+                const readings = await response.json();
+                
+                // استخراج أسماء الحراس *الفريدة*
+                const guardianIds = [...new Set(readings.map(r => r.guardian_id))];
+                guardianIds.sort();
+
+                guardianListEl.innerHTML = '';
+                if (guardianIds.length === 0) {
+                    guardianListEl.innerHTML = '<p>لا يوجد أي حراس مسجلين حاليًا.</p>';
+                    return;
+                }
+
+                guardianIds.forEach(id => {
+                    const item = document.createElement('li');
+                    item.className = 'guardian-item';
+                    item.innerHTML = `
+                        <input type="checkbox" class="guardian-select" data-id="${id}">
+                        <span class="guardian-name">${id}</span>
+                    `;
+                    guardianListEl.appendChild(item);
+                });
+
+            } catch (error) {
+                showStatus(error.message, true);
+            }
+        }
+
+        // --- ربط الأحداث للأزرار الجديدة ---
+
+        // 1. تحديد الكل
+        selectAllCheckbox.addEventListener('change', () => {
+            document.querySelectorAll('.guardian-select').forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+        });
+
+        // 2. حذف المحدد
+        deleteSelectedBtn.addEventListener('click', async () => {
+            const selectedIds = [];
+            document.querySelectorAll('.guardian-select:checked').forEach(checkbox => {
+                selectedIds.push(checkbox.dataset.id);
+            });
+
+            if (selectedIds.length === 0) {
+                showStatus("الرجاء تحديد حارس واحد على الأقل لحذفه.", true);
+                return;
+            }
+
+            if (!confirm(`هل أنت متأكد أنك تريد حذف (${selectedIds.length}) حارس وكل بياناتهم؟`)) {
+                return;
+            }
+
+            try {
+                showStatus("جاري حذف الحراس المحددين...", false);
+                const response = await fetch('http://localhost:3000/api/v1/readings/delete-multiple', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: selectedIds })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message);
+                
+                showStatus(data.message, false);
+                loadGuardians();
+                selectAllCheckbox.checked = false;
+            } catch (error) {
+                showStatus(error.message, true);
+            }
+        });
+
+        // 3. حذف الكل (مع تأكيد خطير)
+        deleteAllBtn.addEventListener('click', async () => {
+            if (!confirm("!!! تحذير خطير !!!\nهل أنت متأكد 100% أنك تريد حذف *كل* البيانات من قاعدة البيانات؟\nهذه العملية لا يمكن التراجع عنها نهائيًا.")) {
+                return;
+            }
+            
+            const confirmationText = "DELETE ALL DATA";
+            const userInput = prompt(`للتأكيد النهائي، يرجى كتابة "${confirmationText}" بالضبط في المربع التالي:`);
+
+            if (userInput !== confirmationText) {
+                showStatus("لم يتم الحذف. الكتابة غير مطابقة.", true);
+                return;
+            }
+
+            try {
+                showStatus("جاري حذف كل البيانات...", false);
+                const response = await fetch('http://localhost:3000/api/v1/readings/all-data', {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message);
+                
+                showStatus(data.message, false);
+                loadGuardians();
+            } catch (error) {
+                showStatus(error.message, true);
+            }
+        });
+
+        // بدء التشغيل
+        loadGuardians();
+    </script>
+</body>
+</html>
