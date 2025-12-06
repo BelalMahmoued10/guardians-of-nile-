@@ -303,7 +303,7 @@
                 return;
             }
             try {
-                const response = await fetch(`http://localhost:3000/api/v1/readings/${guardianId}`);
+               const res = await fetch(`/api/v1/readings/${encodeURIComponent(guardianId)}`);
                 if (!response.ok) {
                      const errorData = await response.json();
                      throw new Error(errorData.message || `خطأ ${response.status}`);
