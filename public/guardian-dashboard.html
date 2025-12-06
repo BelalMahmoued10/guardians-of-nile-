@@ -358,7 +358,7 @@
             reportModal.classList.add('visible');
 
             try {
-                const response = await fetch(`http://localhost:3000/api/v1/ai-analysis/${guardianId}`);
+                const response = await fetch(`/api/v1/ai-analysis/${guardianId}`);
                 const data = await response.json(); 
                 
                 // **تصحيح: التحقق من الخطأ القادم كـ JSON**

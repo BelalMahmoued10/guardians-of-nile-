@@ -214,7 +214,7 @@
         // --- 4. الدالة الرئيسية للتحديث ---
         const fetchDataAndUpdate = async () => {
             try {
-                const response = await fetch('http://localhost:3000/api/v1/readings');
+                const response = await fetch('/api/v1/readings');
                 if (!response.ok) throw new Error(`Network response error: ${response.status} ${response.statusText}`);
                 let readings = await response.json();
 

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاكي العكارة السريع</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
+        h2 { color: #333; margin-bottom: 1.5rem; }
+        .input-group { margin-bottom: 1rem; text-align: right; }
+        label { display: block; margin-bottom: 0.5rem; color: #666; }
+        input[type="number"], input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 1rem; }
+        button { background-color: #3182CE; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 1.1rem; font-weight: bold; transition: background-color 0.3s; }
+        button:hover { background-color: #2c5282; }
+        #status { margin-top: 1rem; font-weight: bold; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2><i class="fa-solid fa-water"></i> محاكي العكارة</h2>
+    
+    <div class="input-group">
+        <label for="guardianId">اسم الحارس (ID):</label>
+        <input type="text" id="guardianId" value="Guardian-Turbidity-01">
+    </div>
+
+    <div class="input-group">
+        <label for="turbidityValue">قيمة العكارة (NTU):</label>
+        <input type="number" id="turbidityValue" placeholder="أدخل القيمة (مثلاً 100)">
+    </div>
+
+    <button onclick="sendData()">إرسال البيانات</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    async function sendData() {
+        const guardianId = document.getElementById('guardianId').value;
+        const turbidityValue = document.getElementById('turbidityValue').value;
+        const statusDiv = document.getElementById('status');
+
+        if (!guardianId || !turbidityValue) {
+            statusDiv.textContent = "الرجاء إدخال جميع البيانات";
+            statusDiv.className = "error";
+            return;
+        }
+
+        statusDiv.textContent = "جاري الإرسال...";
+        statusDiv.className = "";
+
+        const data = {
+            guardian_id: guardianId,
+            timestamp: new Date().toISOString(),
+            location: { // موقع افتراضي (يمكن تغييره)
+                latitude: 27.1751 + (Math.random() * 0.01), 
+                longitude: 31.1872 + (Math.random() * 0.01)
+            },
+            readings: [
+                { type: "turbidity", unit: "ntu", value: parseFloat(turbidityValue) }
+            ],
+            battery_level: 0.95
+        };
+
+        try {
+            // **تعديل الرابط ليكون نسبيًا ليعمل محليًا وعلى Vercel**
+            const response = await fetch('/api/v1/readings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                statusDiv.textContent = "تم الإرسال بنجاح!";
+                statusDiv.className = "success";
+            } else {
+                const errorData = await response.json();
+                statusDiv.textContent = "فشل الإرسال: " + (errorData.message || response.statusText);
+                statusDiv.className = "error";
+            }
+        } catch (error) {
+            statusDiv.textContent = "خطأ في الاتصال: " + error.message;
+            statusDiv.className = "error";
+            console.error('Error:', error);
+        }
+    }
+</script>
+
+</body>
+</html>

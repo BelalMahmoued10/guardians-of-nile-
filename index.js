@@ -196,3 +196,4 @@ app.delete('/api/v1/readings/all-data', async (req, res) => {
 app.listen(port, () => {
   console.log(`الخادم يعمل على http://localhost:${port}`);
 });
+module.exports = app;

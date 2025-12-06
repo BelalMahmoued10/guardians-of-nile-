@@ -174,7 +174,7 @@
         // دالة لجلب وعرض الحراس
         async function loadGuardians() {
             try {
-                const response = await fetch('http://localhost:3000/api/v1/readings');
+               const response = await fetch('/api/v1/readings');
                 if (!response.ok) throw new Error('فشل جلب البيانات');
                 const readings = await response.json();
                 
@@ -230,7 +230,7 @@
 
             try {
                 showStatus("جاري حذف الحراس المحددين...", false);
-                const response = await fetch('http://localhost:3000/api/v1/readings/delete-multiple', {
+                const response = await fetch('/api/v1/readings/delete-multiple', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ids: selectedIds })
