@@ -13,67 +13,223 @@
 
     <style>
         :root {
-            --bg-main: #F1F5F9; --panel-color: #FFFFFF; --text-primary: #1A202C; --text-secondary: #718096;
-            --accent-blue: #3182CE; --status-good: #48BB78; --status-warning: #ECC94B; --status-danger: #E53E3E;
+            --bg-main: #F0F2F5; /* خلفية أفتح قليلاً */
+            --panel-color: #FFFFFF;
+            --border-color: #E4E6EB;
+            --text-primary: #1C1E21;
+            --text-secondary: #65676B;
+            --accent-blue: #1877F2; /* أزرق فيسبوك/مودرن */
+            --status-good: #31A24C;
+            --status-warning: #F7B928;
+            --status-danger: #FA3E3E;
+            --font-family: 'Cairo', sans-serif;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 8px 16px rgba(0, 0, 0, 0.05); /* ظل ناعم */
         }
+        
         body.dark-mode {
-            --bg-main: #1A202C; --panel-color: #2D3748; --text-primary: #E2E8F0; --text-secondary: #A0AEC0;
+            --bg-main: #18191A;
+            --panel-color: #242526;
+            --border-color: #393A3B;
+            --text-primary: #E4E6EB;
+            --text-secondary: #B0B3B8;
+            --shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-primary); margin: 0; padding: 2rem; }
-        .container { max-width: 1200px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
-        .header h1 { margin: 0; font-size: 1.8rem; }
-        #last-updated-time { font-size: 0.9rem; color: var(--text-secondary); margin-top: 5px; display: block; }
-        .analysis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
-        .analysis-card { background: var(--panel-color); padding: 1.5rem; border-radius: 10px; border-left: 5px solid gray; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .status-good { border-left-color: var(--status-good); }
-        .status-warning { border-left-color: var(--status-warning); }
-        .status-danger { border-left-color: var(--status-danger); }
-        .card-value { font-size: 2.2rem; font-weight: bold; margin: 10px 0; }
-        .chart-card { grid-column: 1 / -1; background: var(--panel-color); padding: 1.5rem; border-radius: 10px; margin-top: 2rem; height: 400px; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-overlay.visible { display: flex; }
-        .modal-content { background: var(--panel-color); width: 90%; max-width: 800px; max-height: 90vh; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
-        .modal-header { padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        
+        body { 
+            font-family: var(--font-family); margin: 0; 
+            background-color: var(--bg-main); 
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container { padding: 2rem; max-width: 1200px; margin: auto; }
+        
+        /* --- Header --- */
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 2.5rem; border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 1.5rem;
+        }
+        .header-title-block { display: flex; flex-direction: column; gap: 5px; }
+        .header h1 { margin: 0; font-size: 2.2rem; font-weight: 700; color: var(--accent-blue); }
+        #last-updated-time { font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: 5px;}
+        
+        .header-controls { display: flex; align-items: center; gap: 1rem; }
+        .header a { 
+            color: var(--text-primary); text-decoration: none; font-weight: 600; 
+            padding: 8px 16px; border-radius: 8px; transition: background 0.2s;
+        }
+        .header a:hover { background-color: rgba(0,0,0,0.05); }
+
+        #theme-toggle {
+            background: var(--panel-color); border: 1px solid var(--border-color);
+            color: var(--text-primary); width: 44px; height: 44px; border-radius: 12px;
+            font-size: 1.2rem; cursor: pointer; display: grid; place-items: center; 
+            transition: all 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        #theme-toggle:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+
+        /* --- Grid & Cards --- */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .analysis-card {
+            background-color: var(--panel-color); 
+            border-radius: 16px; /* زوايا أكثر دائرية */
+            padding: 1.5rem; 
+            display: flex; flex-direction: column;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+        /* الشريط الملون الجانبي */
+        .analysis-card::before {
+            content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 6px;
+            background-color: var(--text-secondary); /* Default */
+        }
+        .analysis-card.status-good::before { background-color: var(--status-good); }
+        .analysis-card.status-warning::before { background-color: var(--status-warning); }
+        .analysis-card.status-danger::before { background-color: var(--status-danger); }
+
+        .analysis-card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+        
+        .card-header { 
+            display: flex; align-items: center; gap: 0.75rem; 
+            color: var(--text-secondary); font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .card-value { 
+            font-size: 2.8rem; font-weight: 800; margin: 1rem 0; color: var(--text-primary);
+        }
+        .card-value .unit { font-size: 1.2rem; color: var(--text-secondary); margin-right: 0.25rem; font-weight: 600;}
+        .card-message { 
+            margin-top: auto; font-size: 0.95rem; line-height: 1.6; 
+            padding-top: 1rem; border-top: 1px solid var(--border-color); color: var(--text-secondary);
+        }
+
+        /* --- Chart Section --- */
+        .chart-section { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+        
+        #ai-analyze-btn {
+            width: 100%; padding: 1.2rem; font-size: 1.2rem; font-weight: 700;
+            font-family: var(--font-family); color: #FFFFFF;
+            background: linear-gradient(135deg, var(--accent-blue), #805AD5); /* تدرج لوني */
+            border: none; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(24, 119, 242, 0.3);
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        #ai-analyze-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(24, 119, 242, 0.4); }
+        #ai-analyze-btn:disabled { background: var(--text-secondary); cursor: not-allowed; opacity: 0.7; }
+
+        .chart-card { 
+            background-color: var(--panel-color); 
+            border-radius: 16px; padding: 2rem;
+            box-shadow: var(--shadow); border: 1px solid var(--border-color);
+            height: 450px;
+        }
+
+        /* --- Modal --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); /* تأثير ضبابي */
+            z-index: 2000; display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: all 0.3s;
+        }
+        .modal-overlay.visible { opacity: 1; visibility: visible; }
+        
+        .modal-content {
+            background-color: var(--panel-color); border-radius: 20px;
+            width: 90%; max-width: 850px; max-height: 85vh;
+            display: flex; flex-direction: column;
+            transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* تأثير ارتداد */
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+
+        .modal-header {
+            padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.4rem; color: var(--accent-blue); display: flex; align-items: center; gap: 10px; }
+        
+        .modal-header-buttons { display: flex; gap: 0.8rem; }
+        
+        .modal-btn {
+            background: transparent; border: 1px solid var(--border-color);
+            color: var(--text-secondary); width: 40px; height: 40px; border-radius: 10px;
+            font-size: 1.1rem; cursor: pointer; display: grid; place-items: center;
+            transition: all 0.2s;
+        }
+        .modal-btn:hover { background-color: rgba(0,0,0,0.05); color: var(--text-primary); }
+        
+        #download-pdf-btn { color: var(--status-good); border-color: var(--status-good); }
+        #download-pdf-btn:hover { background-color: var(--status-good); color: white; }
+        
         .modal-body { padding: 2rem; overflow-y: auto; color: var(--text-primary); }
-        .report-section { margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
-        .report-section h2 { color: var(--accent-blue); font-size: 1.4rem; margin-bottom: 0.5rem; }
-        .report-section p { line-height: 1.6; color: var(--text-secondary); }
+        
+        /* تنسيق التقرير */
+        .report-section { 
+            margin-bottom: 2rem; background: rgba(0,0,0,0.02); 
+            padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);
+        }
+        .report-section h2 {
+            font-size: 1.3rem; color: var(--accent-blue);
+            margin: 0 0 1rem 0; font-weight: 700;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .report-section h2::before { content: '•'; color: var(--accent-blue); font-size: 1.5rem; }
+        .report-section p { line-height: 1.8; margin: 0; font-size: 1.05rem; }
+        .loading { text-align: center; font-size: 1.2rem; color: var(--text-secondary); padding: 3rem; }
+
+        /* أيقونات المستشعرات */
+        .icon-temperature { color: #FF9F43; } 
+        .icon-ph { color: #A55EEA; }
+        .icon-tds { color: #0FB9B1; } 
+        .icon-battery { color: #20BF6B; }
+        .icon-location { color: #FC5C65; } 
+        .icon-turbidity { color: #778ca3; }
+
     </style>
 </head>
 <body>
-
     <div class="container">
         <div class="header">
-            <div>
-                <h1 id="guardian-title">جاري التحميل...</h1>
-                <span id="last-updated-time"></span>
+            <div class="header-title-block">
+                <h1 id="guardian-title"><i class="fa-solid fa-spinner fa-spin"></i> جاري التحميل...</h1>
+                <span id="last-updated-time"><i class="fa-regular fa-clock"></i> في انتظار البيانات...</span>
             </div>
-            <div>
-                <button onclick="toggleTheme()" style="padding: 10px; cursor: pointer; border-radius: 5px; border: 1px solid #ccc;">🌗 وضع ليلي</button>
-                <a href="map.html" style="margin-right: 15px; text-decoration: none; color: var(--accent-blue); font-weight: bold;">العودة للخريطة</a>
+            <div class="header-controls">
+                <button id="theme-toggle" title="تبديل الوضع">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <a href="map.html"><i class="fa-solid fa-arrow-left"></i> الخريطة</a>
             </div>
         </div>
 
-        <div id="analysis-grid" class="analysis-grid"></div>
-
-        <div style="margin-top: 2rem;">
-            <button id="ai-analyze-btn" style="width: 100%; padding: 15px; background: linear-gradient(90deg, #3182CE, #805AD5); color: white; border: none; border-radius: 8px; font-size: 1.2rem; cursor: pointer; font-weight: bold;">
-                <i class="fa-solid fa-robot"></i> طلب تحليل شامل بالذكاء الاصطناعي
-            </button>
+        <div id="analysis-grid" class="analysis-grid">
+            </div>
+        
+        <div class="chart-section">
+            <button id="ai-analyze-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> اطلب رأي الخبير الذكي (AI Analysis)</button>
             <div class="chart-card">
                 <canvas id="readingsChart"></canvas>
             </div>
         </div>
     </div>
-
+    
     <div id="report-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>تقرير التحليل الذكي</h2>
-                <div>
-                    <button id="download-pdf-btn" style="padding: 8px 15px; background: var(--status-good); color: white; border: none; border-radius: 5px; cursor: pointer;">تحميل PDF</button>
-                    <button onclick="document.getElementById('report-modal').classList.remove('visible')" style="padding: 8px 15px; margin-right: 5px; cursor: pointer;">إغلاق</button>
+                <h2><i class="fa-solid fa-file-waveform"></i> تقرير التحليل الذكي</h2>
+                <div class="modal-header-buttons">
+                    <button id="download-pdf-btn" title="تحميل التقرير كـ PDF" class="modal-btn">
+                        <i class="fa-solid fa-file-arrow-down"></i>
+                    </button>
+                    <button id="modal-close" class="modal-btn" title="إغلاق">&times;</button>
                 </div>
             </div>
             <div id="modal-body" class="modal-body"></div>
@@ -81,127 +237,241 @@
     </div>
 
     <script>
+        // --- 1. تعريف العناصر ---
+        const guardianTitle = document.getElementById('guardian-title');
+        const analysisGrid = document.getElementById('analysis-grid');
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeIcon = themeToggleBtn.querySelector('i');
+        const readingsChartCanvas = document.getElementById('readingsChart');
+        let currentChart = null; 
+        const aiAnalyzeBtn = document.getElementById('ai-analyze-btn');
+        const reportModal = document.getElementById('report-modal');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseBtn = document.getElementById('modal-close');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const lastUpdatedTimeEl = document.getElementById('last-updated-time');
+
+        // --- 2. قاموس الأيقونات ---
+        const sensorDisplayInfo = {
+            'temperature': { name: 'درجة الحرارة', icon: 'fa-temperature-half', unit: '°C' },
+            'ph': { name: 'مستوى الحموضة', icon: 'fa-flask-vial', unit: 'pH' },
+            'tds': { name: 'الأملاح الذائبة', icon: 'fa-droplet', unit: 'ppm' },
+            'turbidity': { name: 'مستوى العكارة', icon: 'fa-water', unit: 'NTU' },
+            'battery': { name: 'البطارية', icon: 'fa-battery-full', unit: '%' },
+            'location': { name: 'الموقع', icon: 'fa-location-dot', unit: '' }
+        };
+
         const params = new URLSearchParams(window.location.search);
         const guardianId = params.get('id');
 
-        // 1. جلب البيانات (العقل اليدوي)
-        async function fetchData() {
-            if (!guardianId) return;
+        // --- 3. الرسم البياني (محسن) ---
+        const renderChart = (labels, historyData) => {
+            if (currentChart) { currentChart.destroy(); }
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+            const textColor = isDarkMode ? '#B0B3B8' : '#65676B';
+            
+            const ctx = readingsChartCanvas.getContext('2d');
+            
+            // إنشاء تدرج لوني للخلفية
+            let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(24, 119, 242, 0.5)');
+            gradient.addColorStop(1, 'rgba(24, 119, 242, 0.0)');
+
+            const datasets = [];
+            // مثال: رسم العكارة فقط للتبسيط (يمكنك تفعيل الباقي)
+            if (historyData.turbidity) {
+                datasets.push({ 
+                    label: 'العكارة (NTU)', 
+                    data: historyData.turbidity, 
+                    borderColor: '#1877F2', 
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#1877F2',
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.4 // منحنى ناعم
+                });
+            }
+
+            currentChart = new Chart(ctx, {
+                type: 'line', data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: textColor, font: { family: 'Cairo' } } } },
+                    scales: {
+                        y: { 
+                            grid: { color: gridColor }, ticks: { color: textColor, font: { family: 'Cairo' } } 
+                        },
+                        x: { 
+                            grid: { display: false }, ticks: { color: textColor, font: { family: 'Cairo' } } 
+                        }
+                    },
+                    interaction: { mode: 'index', intersect: false }
+                }
+            });
+        };
+        
+        // --- 4. جلب البيانات ---
+        const fetchDataForGuardian = async () => {
+            if (!guardianId) {
+                guardianTitle.textContent = "خطأ: لم يتم تحديد حارس";
+                return;
+            }
             try {
-                // استخدام المتغير response بشكل موحد
                 const response = await fetch(`/api/v1/readings/${encodeURIComponent(guardianId)}`);
-                
                 if (!response.ok) {
                      const errorData = await response.json();
                      throw new Error(errorData.message || `خطأ ${response.status}`);
                 }
-
-                const data = await response.json(); // استخدام response هنا
+                const data = await response.json();
                 
-                // تحديث العنوان
-                document.getElementById('guardian-title').innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${data.guardian_id}`;
-                document.getElementById('last-updated-time').textContent = new Date(data.timestamp).toLocaleString('ar-EG');
-
-                // تحديث البطاقات
-                const grid = document.getElementById('analysis-grid');
-                grid.innerHTML = '';
-                const icons = { turbidity: 'fa-water', temperature: 'fa-temperature-half', ph: 'fa-flask', tds: 'fa-droplet', battery: 'fa-battery-full' };
+                if (!data || !data.analysis) {
+                    guardianTitle.textContent = "لا توجد بيانات";
+                    return;
+                }
                 
-                ['turbidity', 'ph', 'tds', 'temperature', 'battery'].forEach(type => {
+                guardianTitle.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${data.guardian_id}`;
+                
+                const date = new Date(data.timestamp);
+                lastUpdatedTimeEl.innerHTML = `<i class="fa-regular fa-clock"></i> آخر تحديث: ${date.toLocaleDateString('ar-EG')} - ${date.toLocaleTimeString('ar-EG')}`;
+
+                analysisGrid.innerHTML = ''; 
+                // ترتيب العرض المفضل
+                const displayOrder = ['turbidity', 'temperature', 'ph', 'tds', 'battery'];
+                
+                displayOrder.forEach(type => {
                     if (data.analysis[type]) {
                         const item = data.analysis[type];
-                        grid.innerHTML += `
-                            <div class="analysis-card status-${item.status}">
-                                <div style="display:flex; align-items:center; gap:10px; color:gray;">
-                                    <i class="fa-solid ${icons[type]}"></i> <span>${type.toUpperCase()}</span>
-                                </div>
-                                <div class="card-value">${Math.round(item.value)}</div>
-                                <p>${item.message}</p>
+                        const display = sensorDisplayInfo[type] || { name: type, icon: 'fa-circle', unit: '' };
+                        let displayValue = Math.round(item.value);
+                        
+                        const card = document.createElement('div');
+                        card.className = `analysis-card status-${item.status}`;
+                        card.innerHTML = `
+                            <div class="card-header">
+                                <i class="fa-solid ${display.icon} icon-${type}"></i>
+                                <span>${display.name}</span>
                             </div>
+                            <div class="card-value">${displayValue} <span class="unit">${display.unit}</span></div>
+                            <p class="card-message">${item.message}</p>
                         `;
+                        analysisGrid.appendChild(card);
                     }
                 });
 
-                renderChart(data.history);
-
-            } catch (err) {
-                console.error(err);
-                document.getElementById('guardian-title').textContent = "لم يتم العثور على بيانات";
+                if (data.history && data.history.length > 0) {
+                    const labels = data.history.map(r => new Date(r.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }));
+                    const historyData = {};
+                    // استخراج بيانات العكارة للتاريخ
+                    historyData.turbidity = data.history.map(r => r.readings ? r.readings.find(s => s.type === 'turbidity')?.value : 0);
+                    renderChart(labels, historyData);
+                }
+            } catch (error) {
+                console.error(error);
+                guardianTitle.innerHTML = `خطأ في التحميل`;
+                lastUpdatedTimeEl.textContent = error.message;
+                lastUpdatedTimeEl.style.color = 'var(--status-danger)';
             }
-        }
+        };
 
-        // 2. التحليل الذكي
-        document.getElementById('ai-analyze-btn').addEventListener('click', async () => {
-            const modal = document.getElementById('report-modal');
-            const body = document.getElementById('modal-body');
-            modal.classList.add('visible');
-            body.innerHTML = '<p style="text-align:center; padding:20px;">جاري استشارة الخبير البيئي...</p>';
+        // --- 5. التحليل الذكي ---
+        async function fetchAIAnalysisReport() {
+            aiAnalyzeBtn.disabled = true;
+            aiAnalyzeBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري استشارة الخبير الذكي...';
+            modalBody.innerHTML = '<div class="loading"><i class="fa-solid fa-brain fa-bounce"></i><br><br>جاري تحليل البيانات ومقارنتها بالقانون المصري...</div>';
+            reportModal.classList.add('visible');
 
             try {
-                // استخدام المتغير response بشكل موحد
                 const response = await fetch(`/api/v1/ai-analysis/${encodeURIComponent(guardianId)}`);
-                const data = await response.json(); // استخدام response هنا
-
-                if (!response.ok || data.error) {
-                    throw new Error(data.error || "خطأ غير معروف من الخادم");
-                }
+                const data = await response.json(); 
+                
+                if (!response.ok || data.error) throw new Error(data.error || "خطأ غير معروف");
 
                 if (data.data_quality) {
-                    // لو الرد JSON (منسق)
-                    body.innerHTML = `
-                        <div class="report-section"><h2>1. جودة البيانات</h2><p>${data.data_quality}</p></div>
-                        <div class="report-section"><h2>2. الملخص التنفيذي</h2><p>${data.summary}</p></div>
-                        <div class="report-section"><h2>3. التحليل التفصيلي</h2><p>${data.analysis}</p></div>
-                        <div class="report-section"><h2>4. التوصيات</h2><p>${data.recommendations}</p></div>
-                    `;
+                    let reportHtml = `
+                        <div class="report-section"><h2>جودة البيانات</h2><p>${data.data_quality.replace(/\n/g, '<br>')}</p></div>
+                        <div class="report-section"><h2>الملخص التنفيذي</h2><p>${data.summary.replace(/\n/g, '<br>')}</p></div>
+                        <div class="report-section"><h2>التحليل التفصيلي</h2><p>${data.analysis.replace(/\n/g, '<br>')}</p></div>
+                        <div class="report-section"><h2>التوصيات العملية</h2><p>${data.recommendations.replace(/\n/g, '<br>')}</p></div>`;
+                    modalBody.innerHTML = reportHtml;
                 } else if (data.report) {
-                    // لو الرد نص Markdown
-                    body.innerHTML = marked.parse(data.report);
+                     modalBody.innerHTML = marked.parse(data.report);
                 } else {
-                    body.innerHTML = '<p style="color:red;">حدث خطأ غير متوقع في التنسيق.</p>';
+                    throw new Error("تنسيق الرد غير متوقع.");
                 }
-            } catch (err) {
-                body.innerHTML = `<p style="color:red;">عذراً، حدث خطأ: ${err.message}</p>`;
-            }
-        });
 
-        // 3. تحميل PDF
-        document.getElementById('download-pdf-btn').addEventListener('click', () => {
+            } catch (error) {
+                modalBody.innerHTML = `<p style="color: var(--status-danger); text-align: center;">عذراً، حدث خطأ أثناء التحليل: ${error.message}</p>`;
+            } finally {
+                aiAnalyzeBtn.disabled = false;
+                aiAnalyzeBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> اطلب رأي الخبير الذكي (AI Analysis)';
+            }
+        }
+        
+        // --- 6. تحميل PDF ---
+        const downloadReportAsPDF = () => {
             const element = document.getElementById('modal-body');
-            const opt = {
+            // إخفاء الأزرار مؤقتاً أثناء الطباعة
+            const btns = document.querySelector('.modal-header-buttons');
+            if(btns) btns.style.display = 'none';
+
+            const options = {
                 margin: 0.5,
                 filename: `Report_${guardianId}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
                 jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
-            html2pdf().set(opt).from(element).save();
+            
+            // تطبيق ستايل الطباعة (خلفية بيضاء إجبارية)
+            const oldColor = element.style.color;
+            element.style.color = 'black';
+            element.style.backgroundColor = 'white';
+
+            html2pdf().from(element).set(options).save().then(() => {
+                if(btns) btns.style.display = 'flex';
+                element.style.color = oldColor; // استعادة اللون الأصلي
+                element.style.backgroundColor = '';
+            });
+        };
+
+        // --- 7. تهيئة الأحداث ---
+        aiAnalyzeBtn.addEventListener('click', fetchAIAnalysisReport);
+        modalCloseBtn.addEventListener('click', () => reportModal.classList.remove('visible'));
+        downloadPdfBtn.addEventListener('click', downloadReportAsPDF);
+        reportModal.addEventListener('click', (e) => {
+            if (e.target === reportModal) reportModal.classList.remove('visible');
         });
 
-        function renderChart(history) {
-            const ctx = document.getElementById('readingsChart').getContext('2d');
-            if (currentChart) currentChart.destroy();
-            currentChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: history.map(h => new Date(h.timestamp).toLocaleTimeString()),
-                    datasets: [{
-                        label: 'Turbidity (العكارة)',
-                        data: history.map(h => h.readings.find(r => r.type === 'turbidity')?.value || 0),
-                        borderColor: '#3182CE', tension: 0.4, fill: false
-                    }]
-                }
+        const applyTheme = (theme) => {
+            if (theme === 'dark') {
+                document.body.classList.add('dark-mode');
+                if (themeIcon) themeIcon.className = 'fa-solid fa-sun';
+            } else {
+                document.body.classList.remove('dark-mode');
+                if (themeIcon) themeIcon.className = 'fa-solid fa-moon';
+            }
+            if (currentChart) renderChart(currentChart.data.labels, {}); // إعادة رسم الشارت لتحديث الألوان (تحسين مستقبلي: تحديث البيانات كاملة)
+        };
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        applyTheme(currentTheme);
+
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                let theme = 'light';
+                if (!document.body.classList.contains('dark-mode')) { theme = 'dark'; }
+                localStorage.setItem('theme', theme);
+                applyTheme(theme);
+                // إعادة تحميل البيانات لتحديث ألوان الشارت
+                fetchDataForGuardian(); 
             });
         }
-
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-        }
-
-        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
-
-        fetchData();
+        
+        // التشغيل المبدئي
+        fetchDataForGuardian();
     </script>
 </body>
 </html>
